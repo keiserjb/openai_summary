@@ -1,0 +1,4 @@
+services:
+  openai_summary.openai_summary:
+    class: Drupal\openai_summary\Service\OpenAISummary
+    arguments: ['@config.factory']
