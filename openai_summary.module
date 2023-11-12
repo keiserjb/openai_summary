@@ -71,7 +71,7 @@ function openai_summary_form_alter(&$form, &$form_state, $form_id) {
     );
     backdrop_add_js(
       backdrop_get_path('module', 'openai_summary')
-      . '/js/openai_summary_helper.js'
+      . '/js/openai-summary-helper.js'
     );
     $form['body']['#suffix']
       = '<span class="openai-summary-btn">AI Summary</span>';
@@ -90,27 +90,43 @@ function openai_summary_form_alter(&$form, &$form_state, $form_id) {
  * AJAX callback for generating text.
  */
 function openai_summary_generate_text_callback($form, &$form_state) {
-  //dpm($form_state);
-  if (!empty($form_state['values']['body']['und'][0]['value'])) {
-    $prompt = strip_tags($form_state['values']['body']['und'][0]['value']);
-    $openaiService = new OpenAIService(); // Ensure this is the correct instantiation
+  // Check if the necessary value is present
+  if (!empty($form_state['values']['body'][LANGUAGE_NONE][0]['value'])) {
+    $prompt = strip_tags($form_state['values']['body'][LANGUAGE_NONE][0]['value']);
+    $openaiService = new OpenAIService(); // Ensure correct instantiation
     $generatedText = $openaiService->generateText($prompt);
-    // Log the generated text
-    watchdog('openai_summary', 'Generated text: @text', array('@text' => $generatedText), WATCHDOG_NOTICE);
-    // Update the summary part of the form
-    $form['values']['body']['und'][0]['summary'] = $generatedText;
 
-    // Log the body field structure
-    watchdog('openai_summary', 'Form body field: @body', array('@body' => print_r($form['body'], TRUE)), WATCHDOG_DEBUG);
-    // Return the specific part of the form to be replaced.
-    return $form['body'];
+    // Log the generated text
+    /*watchdog('openai_summary', 'Generated text: @text', array('@text' => $generatedText), WATCHDOG_NOTICE);*/
+
+    // Update the summary part of the form
+    $form['body'][LANGUAGE_NONE][0]['summary']['#value'] = $generatedText;
+
+    // Render only the updated summary input field, not the entire field structure
+    $updated_summary_field = render
+    ($form['body'][LANGUAGE_NONE][0]['summary']);
+
+    // Create an array of AJAX commands
+    $commands = array();
+
+    // Replace only the input field, not the entire field wrapper
+    // Make sure the selector matches the ID of the summary input field in your form
+    $commands[] = ajax_command_replace('.form-item-body-und-0-summary',
+      $updated_summary_field);
+
+    return array('#type' => 'ajax', '#commands' => $commands);
   } else {
-    // Set an error if the body field is empty.
+    // Set an error if the body field is empty
     form_set_error('body', t('Please fill in the required field first.'));
-    // Use ajax_command_alert for showing alert messages.
-    return array('#type' => 'ajax', '#commands' => array(ajax_command_alert(t('Please fill in the required field first.'))));
+
+    // Return an alert command if the field is empty
+    $commands = array();
+    $commands[] = ajax_command_alert(t('Please fill in the required field first.'));
+    return array('#type' => 'ajax', '#commands' => $commands);
   }
 }
+
+
 
 
 
