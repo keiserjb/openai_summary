@@ -1,43 +1,116 @@
 <?php
-use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Ajax\AjaxResponse;
-use Drupal\Core\Ajax\ReplaceCommand;
-use Drupal\Core\Ajax\AlertCommand;
+
+require_once 'includes/OpenAIService.php';
+
+/**
+ * Implements hook_menu().
+ */
+function openai_summary_menu() {
+  $items = array();
+
+  $items['admin/config/content/openai_summary'] = array(
+    'title' => 'OpenAI Summary Settings',
+    'description' => 'Configure OpenAI API settings.',
+    'page callback' => 'backdrop_get_form',
+    'page arguments' => array('openai_summary_settings_form'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  return $items;
+}
+
+function openai_summary_settings_form($form, &$form_state) {
+  $config = config('openai_summary.settings');
+
+  $form['openai_api_key'] = array(
+    '#type' => 'textfield',
+    '#title' => t('OpenAI API key'),
+    '#default_value' => $config->get('openai_api_key'),
+  );
+
+  $form['test_connection'] = array(
+    '#type' => 'submit',
+    '#value' => t('Test Connection'),
+    '#submit' => array('openai_summary_test_connection_submit'),
+  );
+
+  $form['actions']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save configuration'),
+    '#submit' => array('openai_summary_settings_form_submit'), // Specify the submit handler
+  );
+
+  return $form;
+}
+
+
+function openai_summary_settings_form_submit($form, &$form_state) {
+  // Set the configuration value
+  config_set('openai_summary.settings', 'openai_api_key', $form_state['values']['openai_api_key']);
+}
+
+function openai_summary_test_connection_submit($form, &$form_state) {
+  $openaiService = new OpenAIService();
+  if ($openaiService->testConnection()) {
+    backdrop_set_message(t('Connection to OpenAI successful.'), 'status');
+  } else {
+    backdrop_set_message(t('Failed to connect to OpenAI. Check your API key.'), 'error');
+  }
+}
+
+
 
 /**
  * Implements hook_form_alter().
  */
-function openai_summary_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+function openai_summary_form_alter(&$form, &$form_state, $form_id) {
   if (isset($form['body'])) {
-    $form['#attached']['library'][] = 'openai_summary/openai_summary_helper';
-    $form['body']['#suffix'] = '<span class="openai-summary-btn">OpenAI Summary</span>';
+    backdrop_add_css(
+      backdrop_get_path('module', 'openai_summary') . '/css/openai-summary.css'
+    );
+    backdrop_add_js(
+      backdrop_get_path('module', 'openai_summary')
+      . '/js/openai_summary_helper.js'
+    );
+    $form['body']['#suffix']
+      = '<span class="openai-summary-btn">AI Summary</span>';
     $form['actions']['fill_summary'] = [
-      '#type' => 'button',
+      '#type'  => 'button',
       '#value' => t('Fill Summary'),
-      '#ajax' => [
+      '#ajax'  => [
         'callback' => 'openai_summary_generate_text_callback',
-        'event' => 'click',
+        'event'    => 'click',
       ],
     ];
   }
 }
 
 /**
- * Form submit callback for generating text.
+ * AJAX callback for generating text.
  */
-function openai_summary_generate_text_callback(&$form, FormStateInterface $form_state) {
-  $response = new AjaxResponse();
-  if ($form_state->getValue('body')[0]['value'] != '') {
-    $prompt = strip_tags($form_state->getValue('body')[0]['value']);
-    $openaiService = \Drupal::service('openai_summary.openai_summary');
+function openai_summary_generate_text_callback($form, &$form_state) {
+  //dpm($form_state);
+  if (!empty($form_state['values']['body']['und'][0]['value'])) {
+    $prompt = strip_tags($form_state['values']['body']['und'][0]['value']);
+    $openaiService = new OpenAIService(); // Ensure this is the correct instantiation
     $generatedText = $openaiService->generateText($prompt);
-    $form['body']['widget'][0]['summary']['#value'] = ltrim($generatedText);
-    $form['body']['#suffix'] = '';
-    $response->addCommand(new ReplaceCommand('#edit-body-wrapper', $form['body']));
+    // Log the generated text
+    watchdog('openai_summary', 'Generated text: @text', array('@text' => $generatedText), WATCHDOG_NOTICE);
+    // Update the summary part of the form
+    $form['values']['body']['und'][0]['summary'] = $generatedText;
+
+    // Log the body field structure
+    watchdog('openai_summary', 'Form body field: @body', array('@body' => print_r($form['body'], TRUE)), WATCHDOG_DEBUG);
+    // Return the specific part of the form to be replaced.
+    return $form['body'];
+  } else {
+    // Set an error if the body field is empty.
+    form_set_error('body', t('Please fill in the required field first.'));
+    // Use ajax_command_alert for showing alert messages.
+    return array('#type' => 'ajax', '#commands' => array(ajax_command_alert(t('Please fill in the required field first.'))));
   }
-  else {
-    $form_state->setErrorByName('body', t('Please fill in the required field first.'));
-    $response->addCommand(new AlertCommand(t('Please fill in the required field first.')));
-  }
-  return $response;
 }
+
+
+

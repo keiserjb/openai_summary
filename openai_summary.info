@@ -1,0 +1,7 @@
+name = OpenAI Summary
+description = This module add a button in the body field to generate a summary using OpenAI GPT-4.
+package = Custom
+type = module
+backdrop = 1.x
+
+configure = admin/config/content/openai_summary

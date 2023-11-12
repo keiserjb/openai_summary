@@ -1,0 +1,19 @@
+<?php
+
+/**
+ * Implements hook_install().
+ */
+function openai_summary_install() {
+  // Set default values for your configuration.
+  $config = config('openai_summary.settings');
+  $config->set('openai_api_key', '')
+    ->save();
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function openai_summary_uninstall() {
+  // Delete configuration on uninstall.
+  config('openai_summary.settings')->delete();
+}
