@@ -5,6 +5,7 @@ class OpenAIService {
   public function __construct() {
     $config = config('openai_summary.settings');
     $this->apiKey = $config->get('openai_api_key');
+    $this->model = $config->get('openai_model');
   }
 
   public function request($prompt) {
@@ -14,7 +15,7 @@ class OpenAIService {
       'Authorization: Bearer ' . $this->apiKey,
     ];
     $data = json_encode([
-      'model' => 'gpt-4',
+      'model' => $this->model,
       'messages' => [
         ['role' => 'user', 'content' => $prompt]
       ]
@@ -34,9 +35,8 @@ class OpenAIService {
 
   public function testConnection() {
     $url = 'https://api.openai.com/v1/models';
-    $config = config('openai_summary.settings');
     $headers = [
-      'Authorization: Bearer ' . $this->apiKey = $config->get('openai_api_key'),
+      'Authorization: Bearer ' . $this->apiKey,
     ];
 
     $ch = curl_init($url);

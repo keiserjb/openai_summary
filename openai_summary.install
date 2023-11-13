@@ -8,6 +8,8 @@ function openai_summary_install() {
   $config = config('openai_summary.settings');
   $config->set('openai_api_key', '')
     ->save();
+  $config->set('openai_model', 'gpt-3.5-turbo')
+    ->save();
 }
 
 /**

@@ -23,22 +23,38 @@ function openai_summary_menu() {
 function openai_summary_settings_form($form, &$form_state) {
   $config = config('openai_summary.settings');
 
+  $models = array(
+    "gpt-3.5-turbo" => "GPT-3.5 Turbo",
+    "gpt-3.5-turbo-16k" => "GPT-3.5 Turbo 16K",
+    "gpt-4" => "GPT-4",
+    "gpt-4-32k" => "GPT-4 32K",
+  );
+
   $form['openai_api_key'] = array(
     '#type' => 'textfield',
     '#title' => t('OpenAI API key'),
     '#default_value' => $config->get('openai_api_key'),
   );
 
-  $form['test_connection'] = array(
-    '#type' => 'submit',
-    '#value' => t('Test Connection'),
-    '#submit' => array('openai_summary_test_connection_submit'),
+  $form['openai_model'] = array(
+    '#type' => 'select',
+    '#title' => t('Model'),
+    '#description' => t('The model which will generate the completion. <a href="@link" target="_blank">Learn more</a>.', array('@link' => 'https://platform.openai.com/docs/models')),
+    '#options' => $models,
+    '#default_value' => config_get('openai_summary.settings'),
+    '#required' => TRUE,
   );
 
   $form['actions']['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Save configuration'),
     '#submit' => array('openai_summary_settings_form_submit'), // Specify the submit handler
+  );
+
+  $form['test_connection'] = array(
+    '#type' => 'submit',
+    '#value' => t('Test Connection'),
+    '#submit' => array('openai_summary_test_connection_submit'),
   );
 
   return $form;
@@ -48,6 +64,8 @@ function openai_summary_settings_form($form, &$form_state) {
 function openai_summary_settings_form_submit($form, &$form_state) {
   // Set the configuration value
   config_set('openai_summary.settings', 'openai_api_key', $form_state['values']['openai_api_key']);
+  config_set('openai_summary.settings', 'openai_model', $form_state['values']['openai_model']);
+
 }
 
 function openai_summary_test_connection_submit($form, &$form_state) {
