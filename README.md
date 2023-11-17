@@ -1,9 +1,6 @@
 ## Description
 The project consists of a custom module for Backdrop CMS that integrates with the OpenAI API to generate summaries using the GPT-4 model.
 
-## Dependencies
-[OpenAI Connection](https://www.drupal.org/project/openai_connection)
-
 ## Functionality
 The module performs the following tasks:
 
